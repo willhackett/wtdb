@@ -1,0 +1,128 @@
+.TH WTDB 1 "2026-06-14" "wtdb" "User Commands"
+.SH NAME
+wtdb \- give every git worktree its own database
+.SH SYNOPSIS
+.B wtdb
+.I command
+.RI [ options ]
+.SH DESCRIPTION
+.B wtdb
+isolates the local development database per git worktree. When a worktree is
+created it copies the dev database into a new one named after the worktree,
+rewrites the database connection variable in the worktree's env file, and copies
+configured gitignored paths (such as
+.IR node_modules ).
+.PP
+This keeps migration state separated across concurrent worktrees, so a migration
+run on one branch never mutates the schema another branch relies on. It hooks
+into plain
+.B git worktree add
+via a
+.I post-checkout
+hook, so no new git commands are needed.
+.PP
+Database copying is provided by adapters. A PostgreSQL adapter ships in the box,
+copying via a near\-instant
+.B CREATE DATABASE ... TEMPLATE
+and falling back to
+.BR pg_dump (1)
+/
+.BR psql (1)
+when needed.
+.SH COMMANDS
+.TP
+.B init
+Scaffold a starter
+.I .wtdb.json
+in the current repository.
+.TP
+.B install
+Install the
+.I post-checkout
+git hook so new worktrees are provisioned automatically. Idempotent.
+.TP
+.B sync
+Provision the current worktree now: copy the database, write the env file, and
+clone configured paths.
+.TP
+.B prune
+Drop databases whose worktrees have been removed.
+.TP
+.B status
+List the worktrees wtdb has provisioned and their databases.
+.TP
+.B version
+Print the version.
+.SH CONFIGURATION
+A repository is enabled by adding a
+.I .wtdb.json
+file at its root with three keys:
+.TP
+.B envFile
+The dotenv\-format file to copy and rewrite (for example
+.I .env
+or
+.IR .dev.vars ).
+.TP
+.B dbEnvVar
+The variable in that file holding the
+.I postgres://
+connection URL.
+.TP
+.B pathsToCopy
+A list of gitignored directories or files to bring into each new worktree.
+.PP
+Example:
+.PP
+.RS
+.nf
+{
+  "envFile": ".dev.vars",
+  "dbEnvVar": "DATABASE_URL",
+  "pathsToCopy": ["node_modules"]
+}
+.fi
+.RE
+.SH EXAMPLES
+Enable wtdb in a repository:
+.PP
+.RS
+.nf
+wtdb init
+wtdb install
+.fi
+.RE
+.PP
+Create a worktree (provisioned automatically by the hook):
+.PP
+.RS
+.nf
+git worktree add ../myapp-feature
+.fi
+.RE
+.PP
+Remove a worktree and reclaim its database:
+.PP
+.RS
+.nf
+git worktree remove ../myapp-feature
+wtdb prune
+.fi
+.RE
+.SH FILES
+.TP
+.I .wtdb.json
+Per\-repository configuration, at the repository root.
+.TP
+.I .git/wtdb/state.json
+Internal registry mapping worktree paths to provisioned databases.
+.TP
+.I .git/hooks/post-checkout
+Git hook installed by
+.BR "wtdb install" .
+.SH SEE ALSO
+.BR git-worktree (1),
+.BR psql (1),
+.BR pg_dump (1)
+.SH AUTHOR
+Will Hackett. Source and issues: https://github.com/willhackett/wtdb

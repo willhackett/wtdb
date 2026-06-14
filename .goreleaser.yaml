@@ -1,0 +1,38 @@
+version: 2
+
+project_name: wtdb
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: wtdb
+    main: .
+    binary: wtdb
+    env:
+      - CGO_ENABLED=0
+    goos: [darwin, linux]
+    goarch: [amd64, arm64]
+    ldflags:
+      - -s -w -X github.com/willhackett/wtdb/internal/cli.Version={{.Version}}
+
+archives:
+  - id: wtdb
+    formats: [tar.gz]
+    name_template: "wtdb_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - README.md
+      - LICENSE
+      - man/wtdb.1
+
+checksum:
+  name_template: "checksums.txt"
+
+release:
+  github:
+    owner: willhackett
+    name: wtdb
+
+changelog:
+  use: github

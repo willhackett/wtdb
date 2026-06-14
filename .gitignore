@@ -8,6 +8,10 @@
 *.so
 *.dylib
 
+# Build artifacts (make build / make snapshot)
+/bin/
+/dist/
+
 # Test binary, built with `go test -c`
 *.test
 
